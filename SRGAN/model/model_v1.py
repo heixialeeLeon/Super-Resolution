@@ -119,13 +119,13 @@ class Discriminator(nn.Module):
 
 if __name__ == "__main__":
     print("Generator")
-    input = Variable(torch.FloatTensor(1, 3, 256, 256))
-    net = Generator(16,2)
+    input = Variable(torch.FloatTensor(1, 3, 256, 256)).cuda()
+    net = Generator(16,4).cuda()
     output = net(input)
     print(output.shape)
 
     print("Discriminator")
-    discriminator = Discriminator()
-    fake = Variable(torch.FloatTensor(4, 3, 64, 64))
+    discriminator = Discriminator().cuda()
+    fake = Variable(torch.FloatTensor(4, 3, 64, 64)).cuda()
     output = discriminator(fake)
     print(output.shape)

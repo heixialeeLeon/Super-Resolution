@@ -33,7 +33,8 @@ parser.add_argument("--weight", type=str, default=None,help="weight file for res
 parser.add_argument("--output_path", type=str, default="checkpoints_V1",help="checkpoint dir")
 parser.add_argument("--devices", type=str, default="cuda:0",help="device description")
 parser.add_argument("--image_channels", type=int, default=3,help="batch image_channels")
-parser.add_argument("--resume_model", type=str, default='generator_pretrain.pth', help="resume model path")
+parser.add_argument("--resume_model", type=str, default='', help="resume model path")
+parser.add_argument("--scale", type=int, choices=[2,4,6], default=2,help="scale parameter")
 
 args = parser.parse_args()
 print(args)
@@ -71,11 +72,11 @@ def tensor_to_device(tensor):
     return tensor.to(device)
 
 # prepare the data
-train_set = TrainDatasetFromFolder(args.data_dir, crop_size=256, upscale_factor=2)
+train_set = TrainDatasetFromFolder(args.data_dir, crop_size=128, upscale_factor=args.scale)
 train_loader = DataLoader(dataset=train_set, num_workers=4, batch_size=args.batch_size, shuffle=True)
 
 # prepare the model
-generator = Generator(16, 2)
+generator = Generator(16, args.scale)
 generator = model_to_device(generator)
 discriminator = Discriminator()
 discriminator = model_to_device(discriminator)
@@ -94,7 +95,7 @@ optim_discriminator = optim.Adam(discriminator.parameters(), lr=args.discriminat
 
 #generator pre-train
 print("start the generator pre-train ...")
-if args.resume_model:
+if args.resume_model != '':
     print("resume model now")
     resume_model(generator, os.path.join(args.output_path,args.resume_model))
 else:
