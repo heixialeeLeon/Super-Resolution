@@ -83,8 +83,8 @@ discriminator = model_to_device(discriminator)
 # prepare the loss
 feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
 feature_extractor = model_to_device(feature_extractor)
-# content_criterion = nn.MSELoss()
-content_criterion = nn.L1Loss()
+content_criterion = nn.MSELoss()
+# content_criterion = nn.L1Loss()
 adversarial_criterion = nn.BCELoss()
 # ones_const = Variable(torch.ones(args.bache_size, 1))
 
@@ -131,9 +131,11 @@ for epoch in range(args.epochs):
 
         high_res_real = Variable(tensor_to_device(target))
         high_res_fake = generator(Variable(tensor_to_device(data)))
-        target_real = Variable(torch.rand(batch_size,1)*0.5+0.7)
+        #target_real = Variable(torch.rand(batch_size,1)*0.5+0.7)
+        target_real = Variable(torch.ones(batch_size,1))
         target_real = tensor_to_device(target_real)
-        target_fake = Variable(torch.rand(batch_size,1)*0.3)
+        #target_fake = Variable(torch.rand(batch_size,1)*0.3)
+        target_fake = Variable(torch.zeros(batch_size,1))
         target_fake = tensor_to_device(target_fake)
 
         ######### Train discriminator #########

@@ -20,11 +20,6 @@ from PIL import Image
 from torch.utils.data.dataset import Dataset
 from torchvision.transforms import Compose, RandomCrop, ToTensor, ToPILImage, CenterCrop, Resize
 
-
-# prepare the data
-test_set = TrainDatasetFromFolder('/data_1/data/super-resolution/srgan/val', crop_size=256, upscale_factor=2)
-test_loader = DataLoader(dataset=test_set, num_workers=4, batch_size=1, shuffle=False)
-
 # prepare model
 resume_model = "checkpoints_V1/netG_epoch_9.pth"
 generator = Generator(16, 2)
@@ -32,29 +27,32 @@ generator.load_state_dict(torch.load(resume_model,map_location='cuda:0'))
 generator = generator.cuda()
 generator = generator.eval()
 
-def display_transform():
+data_root = "/data_1/data/super-resolution/0203"
+image_list = os.listdir(data_root)
+
+def test_transform(crop_size):
     return Compose([
-        ToPILImage(),
-        Resize(400),
-        CenterCrop(400),
-        ToTensor()
+        CenterCrop(crop_size),
+        ToTensor(),
     ])
 
+class TrainDatasetFromFolder(Dataset):
+    def __init__(self, dataset_dir, crop_size):
+        super(TrainDatasetFromFolder, self).__init__()
+        self.image_filenames = [os.path.join(dataset_dir, x) for x in os.listdir(dataset_dir)]
+        self.transform = test_transform(crop_size)
+
+    def __getitem__(self, index):
+        img = self.transform(Image.open(self.image_filenames[index]))
+        return img
+
+    def __len__(self):
+        return len(self.image_filenames)
+
+test_set = TrainDatasetFromFolder(data_root, crop_size=256)
+test_loader = DataLoader(dataset=test_set, num_workers=4, batch_size=1, shuffle=False)
 
 for item in test_loader:
-    # CV2_showTensors(item[0])
-    # CV2_showTensors(item[1])
-    low_res = item[0]
-    low_res = low_res.cuda()
-    high_res = item[1]
-    sr = generator(Variable(low_res))
-    CV2_showTensors_Resize(low_res,sr,item[1],resize=(400,400),timeout=3000)
-    #print(sr.shape)
-    # low_rs = display_transform()(item[0].squeeze(0))
-    # low_rs =low_rs.unsqueeze(0)
-    # high_rs = display_transform()(item[1].squeeze(0))
-    # high_rs = high_rs.unsqueeze(0)
-    # sr =sr.cpu()
-    # sr = display_transform()(sr.squeeze(0))
-    # sr = sr.unsqueeze(0)
-    # CV2_showTensors(low_rs, sr ,high_rs)
+    item = item.cuda()
+    sr = generator(Variable(item))
+    CV2_showTensors_Resize(item, sr ,resize=(512,512),timeout=0)
