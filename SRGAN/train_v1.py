@@ -33,7 +33,7 @@ parser.add_argument("--weight", type=str, default=None,help="weight file for res
 parser.add_argument("--output_path", type=str, default="checkpoints_V1",help="checkpoint dir")
 parser.add_argument("--devices", type=str, default="cuda:0",help="device description")
 parser.add_argument("--image_channels", type=int, default=3,help="batch image_channels")
-parser.add_argument("--resume_model", type=str, default=None, help="resume model path")
+parser.add_argument("--resume_model", type=str, default='generator_pretrain.pth', help="resume model path")
 
 args = parser.parse_args()
 print(args)
@@ -83,7 +83,8 @@ discriminator = model_to_device(discriminator)
 # prepare the loss
 feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
 feature_extractor = model_to_device(feature_extractor)
-content_criterion = nn.MSELoss()
+# content_criterion = nn.MSELoss()
+content_criterion = nn.L1Loss()
 adversarial_criterion = nn.BCELoss()
 # ones_const = Variable(torch.ones(args.bache_size, 1))
 
@@ -93,23 +94,26 @@ optim_discriminator = optim.Adam(discriminator.parameters(), lr=args.discriminat
 
 #generator pre-train
 print("start the generator pre-train ...")
-# low_res = torch.FloatTensor(args.batch_size, 3, args.image_size, args.image_size)
-for epoch in range(2):
-    mean_generator_content_loss = 0.0
-    for i, (data, target) in enumerate(train_loader):
+if args.resume_model:
+    print("resume model now")
+    resume_model(generator, os.path.join(args.output_path,args.resume_model))
+else:
+    for epoch in range(2):
+        mean_generator_content_loss = 0.0
+        for i, (data, target) in enumerate(train_loader):
 
-        high_res_real = Variable(tensor_to_device(target))
-        high_res_fake = generator(Variable(tensor_to_device(data)))
+            high_res_real = Variable(tensor_to_device(target))
+            high_res_fake = generator(Variable(tensor_to_device(data)))
 
-        generator.zero_grad()
-        generator_content_loss = content_criterion(high_res_fake, high_res_real)
-        mean_generator_content_loss += generator_content_loss.item()
-        generator_content_loss.backward()
-        optim_generator.step()
-        if i % args.steps_show == 0:
-            print("epoch {} {}/{} current loss : {}".format(epoch, i, len(train_loader), generator_content_loss.item()))
+            generator.zero_grad()
+            generator_content_loss = content_criterion(high_res_fake, high_res_real)
+            mean_generator_content_loss += generator_content_loss.item()
+            generator_content_loss.backward()
+            optim_generator.step()
+            if i % args.steps_show == 0:
+                print("epoch {} {}/{} current loss : {}".format(epoch, i, len(train_loader), generator_content_loss.item()))
 
-save_model_as(generator,'generator_pretrain.pth')
+    save_model_as(generator,'generator_pretrain.pth')
 
 # SRGAN training
 print("start the SRGAN training ...")
@@ -127,8 +131,10 @@ for epoch in range(args.epochs):
 
         high_res_real = Variable(tensor_to_device(target))
         high_res_fake = generator(Variable(tensor_to_device(data)))
-        target_real = Variable(torch.rand(batch_size,1)*0.5+0.7).cuda()
-        target_fake = Variable(torch.rand(batch_size,1)*0.3).cuda()
+        target_real = Variable(torch.rand(batch_size,1)*0.5+0.7)
+        target_real = tensor_to_device(target_real)
+        target_fake = Variable(torch.rand(batch_size,1)*0.3)
+        target_fake = tensor_to_device(target_fake)
 
         ######### Train discriminator #########
         discriminator.zero_grad()
@@ -146,7 +152,8 @@ for epoch in range(args.epochs):
         generator_content_loss = content_criterion(high_res_fake, high_res_real) + 0.006 * content_criterion(fake_features, real_features)
         mean_generator_content_loss += generator_content_loss.item()
 
-        ones_const = Variable(torch.ones(batch_size, 1).cuda())
+        ones_const = Variable(tensor_to_device(torch.ones(batch_size, 1)))
+        #ones_const = Variable(torch.ones(batch_size, 1).cuda())
         generator_adversarial_loss = adversarial_criterion(discriminator(high_res_fake), ones_const)
         mean_generator_adversarial_loss += generator_adversarial_loss.item()
 
