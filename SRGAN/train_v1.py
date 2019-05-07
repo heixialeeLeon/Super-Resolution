@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description='Train Super Resolution Models')
 
 # training parameters
 # parser.add_argument("--image_size", type=int, default=256,help="training patch size")
+parser.add_argument("--data_dir", type=str, default="/data_1/data/super-resolution/srgan/train",help="data dir location")
 parser.add_argument("--batch_size", type=int, default=4,help="batch size")
 parser.add_argument("--epochs", type=int, default=60,help="number of epochs")
 parser.add_argument("--save_per_epoch", type=int, default=5,help="number of epochs")
@@ -70,7 +71,7 @@ def tensor_to_device(tensor):
     return tensor.to(device)
 
 # prepare the data
-train_set = TrainDatasetFromFolder('/data_1/data/super-resolution/srgan/train', crop_size=256, upscale_factor=2)
+train_set = TrainDatasetFromFolder(args.data_dir, crop_size=256, upscale_factor=2)
 train_loader = DataLoader(dataset=train_set, num_workers=4, batch_size=args.batch_size, shuffle=True)
 
 # prepare the model
